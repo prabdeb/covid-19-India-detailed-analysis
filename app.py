@@ -9,8 +9,12 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
+from dash.dependencies import Input, Output
 
 from covit19.covid19indiaorg import Covid19indiaorg
+
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 def get_data():
     '''TODO'''
@@ -171,8 +175,14 @@ def get_data():
         if transmition_type not in database["Summary"]["increments"]:
             database["Summary"]["increments"][transmition_type] = {}
         if item["dateannounced"] not in database["Summary"]["increments"][transmition_type]:
-            database["Summary"]["increments"][transmition_type][item["dateannounced"]] = 0
-        database["Summary"]["increments"][transmition_type][item["dateannounced"]] += 1
+            database["Summary"]["increments"][transmition_type][item["dateannounced"]] = {
+                "count": 0,
+                "states": {}
+            }
+        database["Summary"]["increments"][transmition_type][item["dateannounced"]]["count"] += 1
+        if item["detectedstate"] not in database["Summary"]["increments"][transmition_type][item["dateannounced"]]["states"]:
+            database["Summary"]["increments"][transmition_type][item["dateannounced"]]["states"][item["detectedstate"]] = 0
+        database["Summary"]["increments"][transmition_type][item["dateannounced"]]["states"][item["detectedstate"]] += 1
 
 
     # Renders the average
@@ -211,7 +221,8 @@ def main():
         "Imported": [],
         "Local": [],
         "Unknown": [],
-        "NTJ Religious Conference": []
+        "NTJ Religious Conference": [],
+        "StateWise": {}
     }
     for item in database["Summary"]["transmition_types"]:
         summary_pie_chart_labels.append(item)
@@ -231,18 +242,24 @@ def main():
     for date in summary_line_chart_dates_raw:
         total_in_a_date = 0
         for item in summary_line_chart_values:
-            if item == "Total" or item == "TotalHospitalized":
+            if item == "Total" or item == "TotalHospitalized" or item == "StateWise":
                 continue
             if date in database["Summary"]["increments"][item]:
                 if len(summary_line_chart_values[item]) > 0:
                     summary_line_chart_values[item].append(
-                        summary_line_chart_values[item][-1] + database["Summary"]["increments"][item][date]
+                        summary_line_chart_values[item][-1] + database["Summary"]["increments"][item][date]["count"]
                     )
-                    total_in_a_date += database["Summary"]["increments"][item][date]
+                    total_in_a_date += database["Summary"]["increments"][item][date]["count"]
                 else:
                     summary_line_chart_values[item].append(
-                        database["Summary"]["increments"][item][date]
+                        database["Summary"]["increments"][item][date]["count"]
                     )
+                for state in database["Summary"]["increments"][item][date]["states"]:
+                    if state not in summary_line_chart_values["StateWise"]:
+                        summary_line_chart_values["StateWise"][state] = {}
+                    if date not in summary_line_chart_values["StateWise"][state]:
+                        summary_line_chart_values["StateWise"][state][date] = 0
+                    summary_line_chart_values["StateWise"][state][date] += database["Summary"]["increments"][item][date]["states"][state]
             else:
                 if len(summary_line_chart_values[item]) > 0:
                     summary_line_chart_values[item].append(
@@ -266,7 +283,13 @@ def main():
         )
 
     # Create State wise Charts Data
-    
+    all_state_dropdown = []
+    for item in database:
+        if item == "Summary":
+            continue
+        all_state_dropdown.append(
+            {'label': item, 'value': item}
+        )
 
     # Create the figures to plot
     summary_pie_fig = go.Figure(data=[go.Pie(labels=summary_pie_chart_labels, values=summary_pie_chart_values)])
@@ -315,8 +338,6 @@ def main():
     )
 
     # Create the Dashboard
-    external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-    app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
     app.layout = html.Div(children=[
         html.H1(children="COVID-19 India Detailed Analysis"),
         html.H2(children="Total Count: " + str(database["Summary"]["total_count"])),
@@ -334,8 +355,57 @@ def main():
         html.Div(
             dcc.Graph(figure=summary_historical_total_line)
         ),
+        html.H2(children="State Wise Analysis"),
+        html.Div(
+            html.Label([
+                "Select State",
+                dcc.Dropdown(
+                    id='state-filter',
+                    options=all_state_dropdown,
+                    value='Karnataka',
+                    clearable=False
+                )
+            ])
+        ),
+        html.Div([
+            html.Div(id='state-transmition-summary-output', className="six columns"),
+            html.Div(id='state-daily-summary-output', className="six columns"),
+        ], className="row"),
         html.Footer("Based on data from api.covid19india.org")
     ], style={'textAlign': 'center'})
+
+    @app.callback(
+        dash.dependencies.Output('state-transmition-summary-output', 'children'),
+        [dash.dependencies.Input('state-filter', 'value')])
+    def state_transmition_summary(value):
+        statewise_pie_chart_labels = []
+        statewise_pie_chart_values = []
+        for item in database[value]["transmition_types"]:
+            statewise_pie_chart_labels.append(item)
+            statewise_pie_chart_values.append(database[value]["transmition_types"][item]["total_count"])
+        statewise_pie_fig = go.Figure(data=[go.Pie(labels=statewise_pie_chart_labels, values=statewise_pie_chart_values)])
+        statewise_pie_fig.update_layout(title_text='{} State Transmition Types (Total: {})'.format(value, database[value]["total_count"]))
+        
+        return dcc.Graph(figure=statewise_pie_fig)
+    
+    @app.callback(
+        dash.dependencies.Output('state-daily-summary-output', 'children'),
+        [dash.dependencies.Input('state-filter', 'value')])
+    def state_daily_summary(value):
+        statewise_column_chart_dates_iso = []
+        statewise_column_chart_values = []
+        for date in summary_line_chart_dates_raw:
+            if date in summary_line_chart_values["StateWise"][value]:
+                statewise_column_chart_values.append(summary_line_chart_values["StateWise"][value][date])
+                date_obj = datetime.strptime(date, "%d/%m/%Y")
+                statewise_column_chart_dates_iso.append(
+                    date_obj.isoformat()
+                )
+        statewise_column_fig = go.Figure()
+        statewise_column_fig.add_trace(go.Bar(name='Total', x=statewise_column_chart_dates_iso, y=statewise_column_chart_values))
+        statewise_column_fig.update_layout(title_text='{} State Daily Increments'.format(value))
+        
+        return dcc.Graph(figure=statewise_column_fig)
 
     # Run the application
     app.run_server(debug=True)
