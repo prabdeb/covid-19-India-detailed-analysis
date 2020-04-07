@@ -200,216 +200,212 @@ def get_data():
     print("[DEBUG]: Error in Tramission Type Detection - %.2f percent" % error_tramission_type_detection)
     return database
 
-def main():
-    '''TODO'''
+# Get the Database
+database = get_data()
 
-    # Get the Database
-    database = get_data()
+# Create Summary Charts Data
+summary_pie_chart_labels = []
+summary_pie_chart_values = []
+summary_table_chart_status_considered = ["Imported", "Local", "Unknown", "NTJ Religious Conference"]
+summary_table_chart_status_values = {
+    "Hospitalized" : [0, 0, 0, 0],
+    "Recovered": [0, 0, 0, 0],
+    "Deceased": [0, 0, 0, 0]
+}
+summary_line_chart_dates_raw = []
+summary_line_chart_dates_iso = []
+summary_line_chart_values = {
+    "Total": [],
+    "TotalHospitalized": [],
+    "Imported": [],
+    "Local": [],
+    "Unknown": [],
+    "NTJ Religious Conference": [],
+    "StateWise": {}
+}
+for item in database["Summary"]["transmition_types"]:
+    summary_pie_chart_labels.append(item)
+    summary_pie_chart_values.append(database["Summary"]["transmition_types"][item]["total_count"])
 
-    # Create Summary Charts Data
-    summary_pie_chart_labels = []
-    summary_pie_chart_values = []
-    summary_table_chart_status_considered = ["Imported", "Local", "Unknown", "NTJ Religious Conference"]
-    summary_table_chart_status_values = {
-        "Hospitalized" : [0, 0, 0, 0],
-        "Recovered": [0, 0, 0, 0],
-        "Deceased": [0, 0, 0, 0]
-    }
-    summary_line_chart_dates_raw = []
-    summary_line_chart_dates_iso = []
-    summary_line_chart_values = {
-        "Total": [],
-        "TotalHospitalized": [],
-        "Imported": [],
-        "Local": [],
-        "Unknown": [],
-        "NTJ Religious Conference": [],
-        "StateWise": {}
-    }
-    for item in database["Summary"]["transmition_types"]:
-        summary_pie_chart_labels.append(item)
-        summary_pie_chart_values.append(database["Summary"]["transmition_types"][item]["total_count"])
-
-        if item in summary_table_chart_status_considered:
-            if "Hospitalized" in database["Summary"]["transmition_types"][item]:
-                summary_table_chart_status_values["Hospitalized"][summary_table_chart_status_considered.index(item)] = database["Summary"]["transmition_types"][item]["Hospitalized"]
-            if "Recovered" in database["Summary"]["transmition_types"][item]:
-                summary_table_chart_status_values["Recovered"][summary_table_chart_status_considered.index(item)] = database["Summary"]["transmition_types"][item]["Recovered"]
-            if "Deceased" in database["Summary"]["transmition_types"][item]:
-                summary_table_chart_status_values["Deceased"][summary_table_chart_status_considered.index(item)] = database["Summary"]["transmition_types"][item]["Deceased"]
-    for item in database["Summary"]["increments"]:
-        for date in database["Summary"]["increments"][item]:
-            if date not in summary_line_chart_dates_raw:
-                summary_line_chart_dates_raw.append(date)
-    for date in summary_line_chart_dates_raw:
-        total_in_a_date = 0
-        for item in summary_line_chart_values:
-            if item == "Total" or item == "TotalHospitalized" or item == "StateWise":
-                continue
-            if date in database["Summary"]["increments"][item]:
-                if len(summary_line_chart_values[item]) > 0:
-                    summary_line_chart_values[item].append(
-                        summary_line_chart_values[item][-1] + database["Summary"]["increments"][item][date]["count"]
-                    )
-                    total_in_a_date += database["Summary"]["increments"][item][date]["count"]
-                else:
-                    summary_line_chart_values[item].append(
-                        database["Summary"]["increments"][item][date]["count"]
-                    )
-                for state in database["Summary"]["increments"][item][date]["states"]:
-                    if state not in summary_line_chart_values["StateWise"]:
-                        summary_line_chart_values["StateWise"][state] = {}
-                    if date not in summary_line_chart_values["StateWise"][state]:
-                        summary_line_chart_values["StateWise"][state][date] = 0
-                    summary_line_chart_values["StateWise"][state][date] += database["Summary"]["increments"][item][date]["states"][state]
-            else:
-                if len(summary_line_chart_values[item]) > 0:
-                    summary_line_chart_values[item].append(
-                        summary_line_chart_values[item][-1]
-                    )
-                else:
-                    summary_line_chart_values[item].append(
-                        0
-                    )
-        if len(summary_line_chart_values["Total"]) > 0:
-            summary_line_chart_values["Total"].append(
-                summary_line_chart_values["Total"][-1] + total_in_a_date
-            )
-        else:
-            summary_line_chart_values["Total"].append(
-                total_in_a_date
-            )
-        date_obj = datetime.strptime(date, "%d/%m/%Y")
-        summary_line_chart_dates_iso.append(
-            date_obj.isoformat()
-        )
-
-    # Create State wise Charts Data
-    all_state_dropdown = []
-    for item in database:
-        if item == "Summary":
+    if item in summary_table_chart_status_considered:
+        if "Hospitalized" in database["Summary"]["transmition_types"][item]:
+            summary_table_chart_status_values["Hospitalized"][summary_table_chart_status_considered.index(item)] = database["Summary"]["transmition_types"][item]["Hospitalized"]
+        if "Recovered" in database["Summary"]["transmition_types"][item]:
+            summary_table_chart_status_values["Recovered"][summary_table_chart_status_considered.index(item)] = database["Summary"]["transmition_types"][item]["Recovered"]
+        if "Deceased" in database["Summary"]["transmition_types"][item]:
+            summary_table_chart_status_values["Deceased"][summary_table_chart_status_considered.index(item)] = database["Summary"]["transmition_types"][item]["Deceased"]
+for item in database["Summary"]["increments"]:
+    for date in database["Summary"]["increments"][item]:
+        if date not in summary_line_chart_dates_raw:
+            summary_line_chart_dates_raw.append(date)
+for date in summary_line_chart_dates_raw:
+    total_in_a_date = 0
+    for item in summary_line_chart_values:
+        if item == "Total" or item == "TotalHospitalized" or item == "StateWise":
             continue
-        all_state_dropdown.append(
-            {'label': item, 'value': item}
-        )
-
-    # Create the figures to plot
-    summary_pie_fig = go.Figure(data=[go.Pie(labels=summary_pie_chart_labels, values=summary_pie_chart_values)])
-    summary_pie_fig.update_layout(title_text='Overall Transmition Types')
-    summary_column_fig = go.Figure()
-    summary_column_fig.add_trace(go.Bar(name='Hospitalized', x=summary_table_chart_status_considered, y=summary_table_chart_status_values["Hospitalized"]))
-    summary_column_fig.add_trace(go.Bar(name='Recovered', x=summary_table_chart_status_considered, y=summary_table_chart_status_values["Recovered"]))
-    summary_column_fig.add_trace(go.Bar(name='Deceased', x=summary_table_chart_status_considered, y=summary_table_chart_status_values["Deceased"]))
-    summary_column_fig.update_layout(title_text='Overall Status by Transmition Types', barmode='stack')
-    summary_historical_line = go.Figure()
-    summary_historical_line.add_trace(go.Scatter(name="Imported", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Imported"], mode='lines+markers'))
-    summary_historical_line.add_trace(go.Scatter(name="Local", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Local"], mode='lines+markers'))
-    summary_historical_line.add_trace(go.Scatter(name="Unknown", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Unknown"], mode='lines+markers'))
-    summary_historical_line.add_trace(go.Scatter(name="NTJ Religious Conference", x=summary_line_chart_dates_iso, y=summary_line_chart_values["NTJ Religious Conference"], mode='lines+markers'))
-    summary_historical_line.update_layout(title_text='Overall History of Transmition Types')
-    summary_historical_line.update_xaxes(
-        rangeselector=dict(
-            buttons=list([
-                dict(count=7, label="7d", step="day", stepmode="backward"),
-                dict(count=14, label="14d", step="day", stepmode="backward"),
-                dict(count=21, label="21d", step="day", stepmode="backward"),
-                dict(count=1, label="1m", step="month", stepmode="backward"),
-                dict(count=2, label="2m", step="month", stepmode="backward"),
-                dict(count=3, label="3m", step="month", stepmode="backward"),
-                dict(count=4, label="4m", step="month", stepmode="backward"),
-                dict(label="R", step="all")
-            ])
-        )
-    )
-    summary_historical_total_line = go.Figure()
-    summary_historical_total_line.add_trace(go.Scatter(name="Total", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Total"], mode='lines+markers'))
-    summary_historical_total_line.update_layout(title_text='Overall History')
-    summary_historical_total_line.update_xaxes(
-        rangeselector=dict(
-            buttons=list([
-                dict(count=7, label="7d", step="day", stepmode="backward"),
-                dict(count=14, label="14d", step="day", stepmode="backward"),
-                dict(count=21, label="21d", step="day", stepmode="backward"),
-                dict(count=1, label="1m", step="month", stepmode="backward"),
-                dict(count=2, label="2m", step="month", stepmode="backward"),
-                dict(count=3, label="3m", step="month", stepmode="backward"),
-                dict(count=4, label="4m", step="month", stepmode="backward"),
-                dict(label="R", step="all")
-            ])
-        )
-    )
-
-    # Create the Dashboard
-    app.layout = html.Div(children=[
-        html.H1(children="COVID-19 India Detailed Analysis"),
-        html.H2(children="Total Count: " + str(database["Summary"]["total_count"])),
-        html.Div([
-            html.Div([
-                dcc.Graph(figure=summary_pie_fig)
-            ], className="six columns"),
-            html.Div([
-                dcc.Graph(figure=summary_column_fig)
-            ], className="six columns"),
-        ], className="row"),
-        html.Div(
-            dcc.Graph(figure=summary_historical_line)
-        ),
-        html.Div(
-            dcc.Graph(figure=summary_historical_total_line)
-        ),
-        html.H2(children="State Wise Analysis"),
-        html.Div(
-            html.Label([
-                "Select State",
-                dcc.Dropdown(
-                    id='state-filter',
-                    options=all_state_dropdown,
-                    value='Karnataka',
-                    clearable=False
+        if date in database["Summary"]["increments"][item]:
+            if len(summary_line_chart_values[item]) > 0:
+                summary_line_chart_values[item].append(
+                    summary_line_chart_values[item][-1] + database["Summary"]["increments"][item][date]["count"]
                 )
-            ])
-        ),
-        html.Div([
-            html.Div(id='state-transmition-summary-output', className="six columns"),
-            html.Div(id='state-daily-summary-output', className="six columns"),
-        ], className="row"),
-        html.Footer("Based on data from api.covid19india.org")
-    ], style={'textAlign': 'center'})
+                total_in_a_date += database["Summary"]["increments"][item][date]["count"]
+            else:
+                summary_line_chart_values[item].append(
+                    database["Summary"]["increments"][item][date]["count"]
+                )
+            for state in database["Summary"]["increments"][item][date]["states"]:
+                if state not in summary_line_chart_values["StateWise"]:
+                    summary_line_chart_values["StateWise"][state] = {}
+                if date not in summary_line_chart_values["StateWise"][state]:
+                    summary_line_chart_values["StateWise"][state][date] = 0
+                summary_line_chart_values["StateWise"][state][date] += database["Summary"]["increments"][item][date]["states"][state]
+        else:
+            if len(summary_line_chart_values[item]) > 0:
+                summary_line_chart_values[item].append(
+                    summary_line_chart_values[item][-1]
+                )
+            else:
+                summary_line_chart_values[item].append(
+                    0
+                )
+    if len(summary_line_chart_values["Total"]) > 0:
+        summary_line_chart_values["Total"].append(
+            summary_line_chart_values["Total"][-1] + total_in_a_date
+        )
+    else:
+        summary_line_chart_values["Total"].append(
+            total_in_a_date
+        )
+    date_obj = datetime.strptime(date, "%d/%m/%Y")
+    summary_line_chart_dates_iso.append(
+        date_obj.isoformat()
+    )
 
-    @app.callback(
-        dash.dependencies.Output('state-transmition-summary-output', 'children'),
-        [dash.dependencies.Input('state-filter', 'value')])
-    def state_transmition_summary(value):
-        statewise_pie_chart_labels = []
-        statewise_pie_chart_values = []
-        for item in database[value]["transmition_types"]:
-            statewise_pie_chart_labels.append(item)
-            statewise_pie_chart_values.append(database[value]["transmition_types"][item]["total_count"])
-        statewise_pie_fig = go.Figure(data=[go.Pie(labels=statewise_pie_chart_labels, values=statewise_pie_chart_values)])
-        statewise_pie_fig.update_layout(title_text='{} State Transmition Types (Total: {})'.format(value, database[value]["total_count"]))
-        
-        return dcc.Graph(figure=statewise_pie_fig)
+# Create State wise Charts Data
+all_state_dropdown = []
+for item in database:
+    if item == "Summary":
+        continue
+    all_state_dropdown.append(
+        {'label': item, 'value': item}
+    )
+
+# Create the figures to plot
+summary_pie_fig = go.Figure(data=[go.Pie(labels=summary_pie_chart_labels, values=summary_pie_chart_values)])
+summary_pie_fig.update_layout(title_text='Overall Transmition Types')
+summary_column_fig = go.Figure()
+summary_column_fig.add_trace(go.Bar(name='Hospitalized', x=summary_table_chart_status_considered, y=summary_table_chart_status_values["Hospitalized"]))
+summary_column_fig.add_trace(go.Bar(name='Recovered', x=summary_table_chart_status_considered, y=summary_table_chart_status_values["Recovered"]))
+summary_column_fig.add_trace(go.Bar(name='Deceased', x=summary_table_chart_status_considered, y=summary_table_chart_status_values["Deceased"]))
+summary_column_fig.update_layout(title_text='Overall Status by Transmition Types', barmode='stack')
+summary_historical_line = go.Figure()
+summary_historical_line.add_trace(go.Scatter(name="Imported", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Imported"], mode='lines+markers'))
+summary_historical_line.add_trace(go.Scatter(name="Local", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Local"], mode='lines+markers'))
+summary_historical_line.add_trace(go.Scatter(name="Unknown", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Unknown"], mode='lines+markers'))
+summary_historical_line.add_trace(go.Scatter(name="NTJ Religious Conference", x=summary_line_chart_dates_iso, y=summary_line_chart_values["NTJ Religious Conference"], mode='lines+markers'))
+summary_historical_line.update_layout(title_text='Overall History of Transmition Types')
+summary_historical_line.update_xaxes(
+    rangeselector=dict(
+        buttons=list([
+            dict(count=7, label="7d", step="day", stepmode="backward"),
+            dict(count=14, label="14d", step="day", stepmode="backward"),
+            dict(count=21, label="21d", step="day", stepmode="backward"),
+            dict(count=1, label="1m", step="month", stepmode="backward"),
+            dict(count=2, label="2m", step="month", stepmode="backward"),
+            dict(count=3, label="3m", step="month", stepmode="backward"),
+            dict(count=4, label="4m", step="month", stepmode="backward"),
+            dict(label="R", step="all")
+        ])
+    )
+)
+summary_historical_total_line = go.Figure()
+summary_historical_total_line.add_trace(go.Scatter(name="Total", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Total"], mode='lines+markers'))
+summary_historical_total_line.update_layout(title_text='Overall History')
+summary_historical_total_line.update_xaxes(
+    rangeselector=dict(
+        buttons=list([
+            dict(count=7, label="7d", step="day", stepmode="backward"),
+            dict(count=14, label="14d", step="day", stepmode="backward"),
+            dict(count=21, label="21d", step="day", stepmode="backward"),
+            dict(count=1, label="1m", step="month", stepmode="backward"),
+            dict(count=2, label="2m", step="month", stepmode="backward"),
+            dict(count=3, label="3m", step="month", stepmode="backward"),
+            dict(count=4, label="4m", step="month", stepmode="backward"),
+            dict(label="R", step="all")
+        ])
+    )
+)
+
+# Create the Dashboard
+app.layout = html.Div(children=[
+    html.H1(children="COVID-19 India Detailed Analysis"),
+    html.H2(children="Total Count: " + str(database["Summary"]["total_count"])),
+    html.Div([
+        html.Div([
+            dcc.Graph(figure=summary_pie_fig)
+        ], className="six columns"),
+        html.Div([
+            dcc.Graph(figure=summary_column_fig)
+        ], className="six columns"),
+    ], className="row"),
+    html.Div(
+        dcc.Graph(figure=summary_historical_line)
+    ),
+    html.Div(
+        dcc.Graph(figure=summary_historical_total_line)
+    ),
+    html.H2(children="State Wise Analysis"),
+    html.Div(
+        html.Label([
+            "Select State",
+            dcc.Dropdown(
+                id='state-filter',
+                options=all_state_dropdown,
+                value='Karnataka',
+                clearable=False
+            )
+        ])
+    ),
+    html.Div([
+        html.Div(id='state-transmition-summary-output', className="six columns"),
+        html.Div(id='state-daily-summary-output', className="six columns"),
+    ], className="row"),
+    html.Footer("Based on data from api.covid19india.org")
+], style={'textAlign': 'center'})
+
+@app.callback(
+    dash.dependencies.Output('state-transmition-summary-output', 'children'),
+    [dash.dependencies.Input('state-filter', 'value')])
+def state_transmition_summary(value):
+    statewise_pie_chart_labels = []
+    statewise_pie_chart_values = []
+    for item in database[value]["transmition_types"]:
+        statewise_pie_chart_labels.append(item)
+        statewise_pie_chart_values.append(database[value]["transmition_types"][item]["total_count"])
+    statewise_pie_fig = go.Figure(data=[go.Pie(labels=statewise_pie_chart_labels, values=statewise_pie_chart_values)])
+    statewise_pie_fig.update_layout(title_text='{} State Transmition Types (Total: {})'.format(value, database[value]["total_count"]))
     
-    @app.callback(
-        dash.dependencies.Output('state-daily-summary-output', 'children'),
-        [dash.dependencies.Input('state-filter', 'value')])
-    def state_daily_summary(value):
-        statewise_column_chart_dates_iso = []
-        statewise_column_chart_values = []
-        for date in summary_line_chart_dates_raw:
-            if date in summary_line_chart_values["StateWise"][value]:
-                statewise_column_chart_values.append(summary_line_chart_values["StateWise"][value][date])
-                date_obj = datetime.strptime(date, "%d/%m/%Y")
-                statewise_column_chart_dates_iso.append(
-                    date_obj.isoformat()
-                )
-        statewise_column_fig = go.Figure()
-        statewise_column_fig.add_trace(go.Bar(name='Total', x=statewise_column_chart_dates_iso, y=statewise_column_chart_values))
-        statewise_column_fig.update_layout(title_text='{} State Daily Increments'.format(value))
-        
-        return dcc.Graph(figure=statewise_column_fig)
+    return dcc.Graph(figure=statewise_pie_fig)
+
+@app.callback(
+    dash.dependencies.Output('state-daily-summary-output', 'children'),
+    [dash.dependencies.Input('state-filter', 'value')])
+def state_daily_summary(value):
+    statewise_column_chart_dates_iso = []
+    statewise_column_chart_values = []
+    for date in summary_line_chart_dates_raw:
+        if date in summary_line_chart_values["StateWise"][value]:
+            statewise_column_chart_values.append(summary_line_chart_values["StateWise"][value][date])
+            date_obj = datetime.strptime(date, "%d/%m/%Y")
+            statewise_column_chart_dates_iso.append(
+                date_obj.isoformat()
+            )
+    statewise_column_fig = go.Figure()
+    statewise_column_fig.add_trace(go.Bar(name='Total', x=statewise_column_chart_dates_iso, y=statewise_column_chart_values))
+    statewise_column_fig.update_layout(title_text='{} State Daily Increments'.format(value))
+    
+    return dcc.Graph(figure=statewise_column_fig)
 
 if __name__ == "__main__":
-    main()
     # Run the application
     app.run_server(debug=True)
