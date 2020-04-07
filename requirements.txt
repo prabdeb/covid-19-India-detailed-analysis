@@ -1,3 +1,4 @@
 requests
 pycountry
 dash==1.10.0
+gunicorn
