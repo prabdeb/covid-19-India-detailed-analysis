@@ -16,8 +16,6 @@ from covit19.covid19indiaorg import Covid19indiaorg
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-server = app.server
-
 def get_data():
     '''TODO'''
 
@@ -410,6 +408,7 @@ def main():
         return dcc.Graph(figure=statewise_column_fig)
 
     # Run the application
+    server = app.server
     app.run_server(debug=True)
 
 if __name__ == "__main__":
