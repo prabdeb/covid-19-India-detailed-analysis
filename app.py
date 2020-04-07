@@ -194,10 +194,10 @@ def get_data():
     del database["Summary"]["outcome"]["tmp_all_deceased_days"]
 
     # Database is ready now analyze
-    print("[DEBUG]: Ignored Count - %d" % ignored_counter)
-    print("[DEBUG]: Summary Count - %d" % total_counter)
+    #print("[DEBUG]: Ignored Count - %d" % ignored_counter)
+    #print("[DEBUG]: Summary Count - %d" % total_counter)
     error_tramission_type_detection = (false_positives_counter_transmission_types / total_counter) * 100
-    print("[DEBUG]: Error in Tramission Type Detection - %.2f percent" % error_tramission_type_detection)
+    #print("[DEBUG]: Error in Tramission Type Detection - %.2f percent" % error_tramission_type_detection)
     return database
 
 # Get the Database
