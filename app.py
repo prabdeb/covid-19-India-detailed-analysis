@@ -119,7 +119,7 @@ def get_data():
 
         # More high level groupping on transmition types
         if transmition_type == "NTJ Religious Conference":
-            transmition_type = "NTJ Religious Conference"
+            transmition_type = "Local"
         elif transmition_type == "Local":
             transmition_type = "Local"
         elif transmition_type == "Possible Local":
@@ -206,7 +206,7 @@ database = get_data()
 # Create Summary Charts Data
 summary_pie_chart_labels = []
 summary_pie_chart_values = []
-summary_table_chart_status_considered = ["Imported", "Local", "Unknown", "NTJ Religious Conference"]
+summary_table_chart_status_considered = ["Imported", "Local", "Unknown"]
 summary_table_chart_status_values = {
     "Hospitalized" : [0, 0, 0, 0],
     "Recovered": [0, 0, 0, 0],
@@ -220,7 +220,6 @@ summary_line_chart_values = {
     "Imported": [],
     "Local": [],
     "Unknown": [],
-    "NTJ Religious Conference": [],
     "StateWise": {}
 }
 for item in database["Summary"]["transmition_types"]:
@@ -302,7 +301,6 @@ summary_historical_line = go.Figure()
 summary_historical_line.add_trace(go.Scatter(name="Imported", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Imported"], mode='lines+markers'))
 summary_historical_line.add_trace(go.Scatter(name="Local", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Local"], mode='lines+markers'))
 summary_historical_line.add_trace(go.Scatter(name="Unknown", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Unknown"], mode='lines+markers'))
-summary_historical_line.add_trace(go.Scatter(name="NTJ Religious Conference", x=summary_line_chart_dates_iso, y=summary_line_chart_values["NTJ Religious Conference"], mode='lines+markers'))
 summary_historical_line.update_layout(title_text='Overall History of Transmition Types')
 summary_historical_line.update_xaxes(
     rangeselector=dict(
