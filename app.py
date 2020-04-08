@@ -256,8 +256,10 @@ for date in summary_line_chart_dates_raw:
                 if state not in summary_line_chart_values["StateWise"]:
                     summary_line_chart_values["StateWise"][state] = {}
                 if date not in summary_line_chart_values["StateWise"][state]:
-                    summary_line_chart_values["StateWise"][state][date] = 0
-                summary_line_chart_values["StateWise"][state][date] += database["Summary"]["increments"][item][date]["states"][state]
+                    summary_line_chart_values["StateWise"][state][date] = {}
+                if item not in summary_line_chart_values["StateWise"][state][date]:
+                    summary_line_chart_values["StateWise"][state][date][item] = 0
+                summary_line_chart_values["StateWise"][state][date][item] += database["Summary"]["increments"][item][date]["states"][state]
         else:
             if len(summary_line_chart_values[item]) > 0:
                 summary_line_chart_values[item].append(
@@ -288,6 +290,7 @@ for item in database:
     all_state_dropdown.append(
         {'label': item, 'value': item}
     )
+all_state_dropdown = sorted(all_state_dropdown, key = lambda i: i['label'])
 
 # Create the figures to plot
 summary_pie_fig = go.Figure(data=[go.Pie(labels=summary_pie_chart_labels, values=summary_pie_chart_values)])
@@ -381,7 +384,7 @@ def state_transmition_summary(value):
         statewise_pie_chart_labels.append(item)
         statewise_pie_chart_values.append(database[value]["transmition_types"][item]["total_count"])
     statewise_pie_fig = go.Figure(data=[go.Pie(labels=statewise_pie_chart_labels, values=statewise_pie_chart_values)])
-    statewise_pie_fig.update_layout(title_text='{} State Transmition Types (Total: {})'.format(value, database[value]["total_count"]))
+    statewise_pie_fig.update_layout(title_text='{}: Transmition Types (Total: {})'.format(value, database[value]["total_count"]))
     
     return dcc.Graph(figure=statewise_pie_fig)
 
@@ -390,17 +393,30 @@ def state_transmition_summary(value):
     [dash.dependencies.Input('state-filter', 'value')])
 def state_daily_summary(value):
     statewise_column_chart_dates_iso = []
-    statewise_column_chart_values = []
+    statewise_column_chart_values = {
+        "Imported": [],
+        "Local": [],
+        "Unknown": []
+    }
+    statewise_transmition_types = [
+        "Imported",
+        "Local",
+        "Unknown",
+    ]
     for date in summary_line_chart_dates_raw:
         if date in summary_line_chart_values["StateWise"][value]:
-            statewise_column_chart_values.append(summary_line_chart_values["StateWise"][value][date])
-            date_obj = datetime.strptime(date, "%d/%m/%Y")
+            for transmition in statewise_transmition_types:
+                statewise_column_chart_values[transmition].append(0)
+            for transmition in summary_line_chart_values["StateWise"][value][date]:
+                statewise_column_chart_values[transmition][-1] = summary_line_chart_values["StateWise"][value][date][transmition]
+                date_obj = datetime.strptime(date, "%d/%m/%Y")
             statewise_column_chart_dates_iso.append(
                 date_obj.isoformat()
             )
     statewise_column_fig = go.Figure()
-    statewise_column_fig.add_trace(go.Bar(name='Total', x=statewise_column_chart_dates_iso, y=statewise_column_chart_values))
-    statewise_column_fig.update_layout(title_text='{} State Daily Increments'.format(value))
+    for transmition in statewise_transmition_types:
+        statewise_column_fig.add_trace(go.Bar(name=transmition, x=statewise_column_chart_dates_iso, y=statewise_column_chart_values[transmition]))
+    statewise_column_fig.update_layout(title_text='{}: Daily Increments'.format(value), barmode='stack')
     
     return dcc.Graph(figure=statewise_column_fig)
 
