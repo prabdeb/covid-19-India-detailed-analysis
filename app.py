@@ -196,12 +196,28 @@ def get_data():
     # Database is ready now analyze
     #print("[DEBUG]: Ignored Count - %d" % ignored_counter)
     #print("[DEBUG]: Summary Count - %d" % total_counter)
-    error_tramission_type_detection = (false_positives_counter_transmission_types / total_counter) * 100
+    #error_tramission_type_detection = (false_positives_counter_transmission_types / total_counter) * 100
     #print("[DEBUG]: Error in Tramission Type Detection - %.2f percent" % error_tramission_type_detection)
-    return database
+
+    # Create recovered and deceased Database
+    recovered_data = {}
+    for row in covid19indiaorg.get_recovered_data():
+        if row[0] == "date":
+            continue
+        recovered_data[row[0]] = int(row[1])
+    deceased_data = {}
+    for row in covid19indiaorg.get_deceased_data():
+        if row[0] == "date":
+            continue
+        deceased_data[row[0]] = int(row[1])
+
+    return {"database": database, "recovered_data": recovered_data, "deceased_data": deceased_data}
 
 # Get the Database
-database = get_data()
+all_data = get_data()
+database = all_data["database"]
+recovered_data = all_data["recovered_data"]
+deceased_data = all_data["deceased_data"]
 
 # Create Summary Charts Data
 summary_pie_chart_labels = []
@@ -282,6 +298,64 @@ for date in summary_line_chart_dates_raw:
         date_obj.isoformat()
     )
 
+summary_line_chart_other_values = {
+    "Recovered": [],
+    "Deceased": [],
+    "Active": []
+}
+# Create a merged data with total reported and recovered and deceased data
+for date in recovered_data:
+    date_formatted = datetime.strptime(date, "%d-%b-%y").strftime("%d/%m/%Y")
+    if date_formatted not in summary_line_chart_dates_raw:
+        print("Ignoring Date from Recovered: {}".format(date_formatted))
+for date in deceased_data:
+    date_formatted = datetime.strptime(date, "%d-%b-%y").strftime("%d/%m/%Y")
+    if date_formatted not in summary_line_chart_dates_raw:
+        print("Ignoring Date from Deceased: {}".format(date_formatted))
+for date in summary_line_chart_dates_raw:
+    date_formatted = datetime.strptime(date, "%d/%m/%Y").strftime("%d-%b-%y")
+    if date_formatted in recovered_data:
+        if len(summary_line_chart_other_values["Recovered"]) > 0:
+            summary_line_chart_other_values["Recovered"].append(
+                summary_line_chart_other_values["Recovered"][-1] + recovered_data[date_formatted]
+            )
+        else:
+            summary_line_chart_other_values["Recovered"].append(
+                summary_line_chart_other_values["Recovered"][-1]
+            )
+    else:
+        if len(summary_line_chart_other_values["Recovered"]) > 0:
+            summary_line_chart_other_values["Recovered"].append(
+                summary_line_chart_other_values["Recovered"][-1]
+            )
+        else:
+            summary_line_chart_other_values["Recovered"].append(
+                0
+            )
+    if date_formatted in deceased_data:
+        if len(summary_line_chart_other_values["Deceased"]) > 0:
+            summary_line_chart_other_values["Deceased"].append(
+                summary_line_chart_other_values["Deceased"][-1] + deceased_data[date_formatted]
+            )
+        else:
+            summary_line_chart_other_values["Deceased"].append(
+                summary_line_chart_other_values["Deceased"][-1]
+            )
+    else:
+        if len(summary_line_chart_other_values["Deceased"]) > 0:
+            summary_line_chart_other_values["Deceased"].append(
+                summary_line_chart_other_values["Deceased"][-1]
+            )
+        else:
+            summary_line_chart_other_values["Deceased"].append(
+                0
+            )
+    summary_line_chart_other_values["Active"].append(
+        summary_line_chart_values["Total"][summary_line_chart_dates_raw.index(date)] - (
+            summary_line_chart_other_values["Deceased"][-1] + summary_line_chart_other_values["Recovered"][-1]
+        )
+    )
+
 # Create State wise Charts Data
 all_state_dropdown = []
 for item in database:
@@ -321,6 +395,9 @@ summary_historical_line.update_xaxes(
 )
 summary_historical_total_line = go.Figure()
 summary_historical_total_line.add_trace(go.Scatter(name="Total", x=summary_line_chart_dates_iso, y=summary_line_chart_values["Total"], mode='lines+markers'))
+summary_historical_total_line.add_trace(go.Scatter(name="Deceased", x=summary_line_chart_dates_iso, y=summary_line_chart_other_values["Deceased"], mode='lines+markers'))
+summary_historical_total_line.add_trace(go.Scatter(name="Recovered", x=summary_line_chart_dates_iso, y=summary_line_chart_other_values["Recovered"], mode='lines+markers'))
+summary_historical_total_line.add_trace(go.Scatter(name="Active", x=summary_line_chart_dates_iso, y=summary_line_chart_other_values["Active"], mode='lines+markers'))
 summary_historical_total_line.update_layout(title_text='Overall History')
 summary_historical_total_line.update_xaxes(
     rangeselector=dict(
